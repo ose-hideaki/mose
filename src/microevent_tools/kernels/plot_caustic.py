@@ -24,7 +24,7 @@ def source_trajectory(pars, tau, *, radec=None, reference_time=None):
         sky=lcbinint.obs.SkyCoord(*radec) if radec is not None else None,
         t_ref=reference_time)
     curve = lcbinint.LightCurve(model=model,
-        options=lcbinint.Options(coordinates='vbm_center_of_mass'))
+        options=lcbinint.Options(jax=True, coordinates='vbm_center_of_mass'))
     trajectory = curve.source_trajectory(pars['t0']+tau*pars['tE'], pars)
     return np.asarray(trajectory.x), np.asarray(trajectory.y)
 

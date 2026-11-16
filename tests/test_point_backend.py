@@ -33,7 +33,7 @@ class PointBackendTests(unittest.TestCase):
         self.assertTrue(np.isfinite(gradient).all())
         curve=lcbinint.LightCurve(model=lcbinint.Model(finite_source=False,parallax=True,
             sky=lcbinint.obs.SkyCoord('18:00:00','-29:00:00'),t_ref=8000.),
-            options=lcbinint.Options(coordinates='vbm_center_of_mass'))
+            options=lcbinint.Options(jax=True, coordinates='vbm_center_of_mass'))
         path=curve.source_trajectory(np.asarray(times),dict(u0=.2,tE=100.,t0=8000.,alpha=0.,s=1.2,q=.001,piEN=.3,piEE=-.2))
         u=np.hypot(path.x,path.y)
         np.testing.assert_allclose(result,(u*u+2)/(u*np.sqrt(u*u+4)),rtol=1e-5)

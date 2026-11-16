@@ -24,6 +24,9 @@ class JaxBackendTests(unittest.TestCase):
         x,y=source_trajectory(p,tau)
         np.testing.assert_allclose(x,expected.x,atol=1e-12)
         np.testing.assert_allclose(y,expected.y,atol=1e-12)
+        annual=dict(p,piEN=.3,piEE=-.2)
+        ax,ay=source_trajectory(annual,tau,radec=('18:00:00','-29:00:00'),reference_time=8000.)
+        self.assertTrue(np.isfinite(ax).all() and np.isfinite(ay).all())
 
     def test_native_static_magnifications_and_gradient(self):
         import jax

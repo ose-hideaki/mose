@@ -20,3 +20,5 @@ All 17 unittest checks passed, including lcbinint JAX/native agreement, selected
 The historical validation above refers to the former autodiff-vbm implementation. It is not evidence for the new backend. The full external-grid binary workflow remains unverified end to end.
 
 The new CPU backend also completed all four point-model optimizations, 8-warmup/8-draw single-chain NUTS runs, comparison table and four physical light-curve images on the bundled synthetic data. Re-running reused all ten completed stages. Static and annual binary caustic/trajectory plots were generated with lcbinint geometry. These deliberately short chains check execution, not convergence.
+
+The first Linux run built successfully but exposed NaNs in the upstream native annual trajectory helper used by a comparison test. Production/plot trajectory helpers now consistently use lcbinint's JAX CPU path; annual plot coordinates have an explicit finite-value regression check. The native annual helper is not used as a physical reference for this backend.
