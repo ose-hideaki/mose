@@ -10,28 +10,31 @@
 - 改善度判定、static binary / annual parallax binaryの局所NUTSと候補選択
 - 必要に応じたpointモデル再フィット、比較表・ライトカーブ・caustic図
 - 同一条件の完了工程の再利用、工程別ログ、Grid Engineへの投入
-- 独立したVBMicrolensing + emceeフィッター
+- 旧環境との比較用に独立したVBMicrolensing + emceeフィッター（任意のnative extra）
 
 **実行完了は、MCMCの収束や全ての縮退解を回収したことを意味しない。**
 特にNUTSは最適化解周辺の有限範囲で実行する。物理的な事前分布を設定した大域的事後分布とは区別する。
 
 ## インストール
 
-Python 3.11以上、C++コンパイラー、CMakeを使用する。既存の解析環境と分けた仮想環境を推奨する。
-JAXバックエンドは、同梱ソースとVBMicrolensing内部APIの組み合わせを固定している。
+Python 3.11以上、C++17コンパイラー、CMake、GSL、Boostの開発用ファイルが必要。
+通常の解析は **lcbinint CPU/JAX** を使用し、autodiff-vbm/VBMicrolensingへの実行時依存はない。
+単一レンズはPSPL解析式と、このパッケージのuniform-source FSPL輪郭積分を使う。
+
+Macでは `brew install gsl boost`、Debian/Ubuntuでは `sudo apt-get install libgsl-dev libboost-dev` で開発用ファイルを用意する。
+既存の解析環境から分けてインストールする。
 
 ```bash
 python3.11 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip setuptools wheel
-python -m pip install -e '.[jax,native,test]'
-python -m pip install --no-build-isolation --no-deps -e vendor/autodiff-vbm
-autodiff-vbm-build-native
+python -m pip install 'numpy<2' 'jax==0.6.2' 'numpyro==0.19.0' scikit-build-core pybind11 cmake
+python -m pip install --no-build-isolation -e '.[jax,test]'
 ```
 
-MacとLinuxのCPUで使用する構成。コンパイル済みライブラリーは同梱しない。
-VBMicrolensing 5.5以外のバージョンへ変更する場合は、nativeビルドと数値一致を再検証する。
-同梱第三者コードのライセンス・由来は [vendor/autodiff-vbm/NOTICE](vendor/autodiff-vbm/NOTICE) を参照。
+lcbinintはGitHubの特定commitに固定して取得する。Macでライブラリーの場所を見つけられない場合は、最後のコマンドに
+`GSL_ROOT=$(brew --prefix gsl) CMAKE_PREFIX_PATH=$(brew --prefix)` を環境変数として指定する。
+GPUは不要。JAX 64-bitを使用する。詳細は [docs/backend-lcbinint.md](docs/backend-lcbinint.md)。
 
 ## 合成データで試す
 
@@ -100,13 +103,13 @@ python -m unittest discover -s tests -v
 ```
 
 設定・データ選択・再実行・資源設定、native増光・短いemcee、JAX増光と勾配・短いparallax NUTSを検査する。
-JAXまたはnative依存がない場合は対応する試験をskipする。短いチェーンの試験は収束試験ではない。
+lcbinintまたは任意のnative依存がない場合は対応する試験をskipする。短いチェーンの試験は収束試験ではない。
 
 ## 由来と公開範囲
 
 元スクリプトとの対応と既知の修正は [docs/migration.md](docs/migration.md)、元ファイルのハッシュは
 [docs/source-provenance.json](docs/source-provenance.json) に記録した。
 実データ・認証情報・サーバーの個人パス・結果・既存のバイナリーは配布対象に含めない。
-主プロジェクトのライセンスは未設定。第三者コードのライセンスは各ディレクトリのものを維持する。
+主プロジェクトのライセンスは未設定。外部依存のライセンスは各プロジェクトを参照する。
 
 検証した環境・範囲は [docs/validation.md](docs/validation.md) に記録している。

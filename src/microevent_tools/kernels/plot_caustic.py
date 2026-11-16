@@ -15,23 +15,18 @@ import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from VBMicrolensing import VBMicrolensing
+import lcbinint
 from .jax_binary_static_fit import read_best
 
 def source_trajectory(pars, tau, *, radec=None, reference_time=None):
     """Use radians and the same center-of-mass trajectory as the fit backend."""
-    if radec is None:
-        a, u0 = pars["alpha"], pars["u0"]
-        return u0*np.sin(a)-tau*np.cos(a), -u0*np.cos(a)-tau*np.sin(a)
-    from autodiff_vbm import AutodiffVBM
-    engine = AutodiffVBM()
-    engine.SetObjectCoordinates(" ".join(radec))
-    engine.t0_par_fixed = 1
-    engine.t0_par = float(reference_time)
-    p = [np.log(pars["s"]), np.log(pars["q"]), pars["u0"], pars["alpha"],
-         np.log(pars["rho"]), np.log(pars["tE"]), pars["t0"], pars["pai1"], pars["pai2"]]
-    _, x, y = engine.BinaryLightCurveParallax(p, pars["t0"]+tau*pars["tE"])
-    return np.asarray(x), np.asarray(y)
+    model = lcbinint.Model(parallax=radec is not None,
+        sky=lcbinint.obs.SkyCoord(*radec) if radec is not None else None,
+        t_ref=reference_time)
+    curve = lcbinint.LightCurve(model=model,
+        options=lcbinint.Options(coordinates='vbm_center_of_mass'))
+    trajectory = curve.source_trajectory(pars['t0']+tau*pars['tE'], pars)
+    return np.asarray(trajectory.x), np.asarray(trajectory.y)
 
 
 def main():
@@ -49,14 +44,9 @@ def main():
         ax.text(.5,.5,"FSPL: no binary caustic",ha="center",va="center",transform=ax.transAxes)
         ax.set_axis_off()
     else:
-        v=VBMicrolensing(); caustics=v.Caustics(s,q)
-        for k,c in enumerate(caustics):
-            ax.plot(c[0],c[1],color="#c53030",lw=1.5,label="caustic" if k==0 else None)
-        # center-of-mass coordinates, matching binfit.pl convention
-        x1=-q*s/(1+q); x2=s/(1+q)
-        ax.scatter([x1,x2],[0,0],marker="o",s=90,facecolors="white",
-                   edgecolors=["#3569b0","#2f855a"],linewidths=1.8,
-                   zorder=4,label="lens")
+        geometry = lcbinint.LightCurve(options=lcbinint.Options(coordinates='vbm_center_of_mass')).caustics(pars)
+        for k,(cx,cy) in enumerate(zip(geometry.x,geometry.y)):
+            ax.plot(cx,cy,color="#c53030",lw=1.5,label="caustic" if k==0 else None)
         tau=np.linspace(-args.trajectory,args.trajectory,1000)
         radec = None
         reference = None
@@ -65,7 +55,7 @@ def main():
                 raise ValueError("--parallax requires --radec")
             from .jax_binary_parallax_fit import read_radec, read_parallax, read_reference_time
             radec = read_radec(args.radec)
-            pars["pai1"], pars["pai2"] = read_parallax(args.model)
+            pars["piEN"], pars["piEE"] = read_parallax(args.model)
             reference = read_reference_time(args.model, pars["t0"])
         x, y = source_trajectory(pars, tau, radec=radec, reference_time=reference)
         x0, y0 = source_trajectory(pars, np.array([0.]), radec=radec, reference_time=reference)

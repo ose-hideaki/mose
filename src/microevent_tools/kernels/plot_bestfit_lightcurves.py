@@ -22,7 +22,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import os
-from . import autodiff_vbm_backend as lcbinint
+import lcbinint
 from .jax_binary_parallax_fit import make_curve, read_radec
 from .jax_binary_static_fit import profile_flux, read_best, read_data
 
@@ -58,11 +58,16 @@ def pspl_magnification(times, parameters):
 
 
 def parallax_components(path):
-    for line in path.read_text().splitlines():
-        if line.startswith("#BEST"):
-            values = [float(value) for value in line.split()[1:]]
-            return values[8], values[9]
-    raise ValueError(f"No parallax #BEST in {path}")
+    from .jax_binary_parallax_fit import read_parallax as strict_read
+    text = path.read_text()
+    if "# parallax_basis= NE" in text:
+        return strict_read(path)
+    for line in text.splitlines():
+        if line.startswith('#BEST'):
+            values = [float(x) for x in line.split()[1:]]
+            if len(values) >= 10 and any(values[8:10]):
+                raise ValueError('Legacy/unlabelled parallax components: use a fresh NE fit')
+    return 0., 0.
 
 
 def read_reference_time(path, default):
@@ -73,8 +78,8 @@ def read_reference_time(path, default):
 
 
 def fspl_magnification(times, parameters):
-    from autodiff_vbm import AutodiffVBM
-    vbm = AutodiffVBM()
+    from .point_backend import PointLens
+    vbm = PointLens()
     vbm.Tol = 1e-4
     vbm.RelTol = 1e-4
     theta = jnp.asarray([np.log(abs(parameters["u0"])), np.log(parameters["tE"]),
@@ -84,19 +89,19 @@ def fspl_magnification(times, parameters):
 
 def point_parallax_magnification(times, parameters, *, finite_source, ra, dec,
                                  reference_time):
-    from autodiff_vbm import AutodiffVBM
+    from .point_backend import PointLens
 
-    vbm = AutodiffVBM()
+    vbm = PointLens()
     vbm.Tol = 1e-4
     vbm.RelTol = 1e-4
-    vbm.espl_table_only = finite_source
+
     vbm.SetObjectCoordinates(f"{ra} {dec}")
     vbm.t0_par_fixed = 1
     vbm.t0_par = reference_time
     raw = [parameters["u0"], np.log(parameters["tE"]), parameters["t0"]]
     if finite_source:
         raw.append(np.log(parameters["rho"]))
-    raw.extend([parameters["pai1"], parameters["pai2"]])
+    raw.extend([parameters["piEN"], parameters["piEE"]])
     function = (vbm.ESPLLightCurveParallax if finite_source
                 else vbm.PSPLLightCurveParallax)
     return np.asarray(function(jnp.asarray(raw), jnp.asarray(times))[0])
@@ -117,13 +122,13 @@ def main():
                         ("FSPL parallax", args.fspl_parallax)):
         if path is not None:
             parameters = read_best(path, defaults)
-            parameters["pai1"], parameters["pai2"] = parallax_components(path)
+            parameters["piEN"], parameters["piEE"] = parallax_components(path)
             point_parallax[title] = (parameters, path)
     static = parallax = None
     if not args.point_only:
         static = read_best(args.static, defaults)
         parallax = read_best(args.parallax, defaults)
-        parallax["pai1"], parallax["pai2"] = parallax_components(args.parallax)
+        parallax["piEN"], parallax["piEE"] = parallax_components(args.parallax)
     default_center = fspl["t0"] if static is None else static["t0"]
     data_center = default_center if args.data_center is None else args.data_center
     datasets, all_times = read_data(args.list_path, data_center, args.time_window)

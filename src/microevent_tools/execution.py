@@ -39,8 +39,6 @@ def environment(settings):
     env["PYTHONUNBUFFERED"] = "1"
     # Include this installed/source package for workers, including editable installs.
     additions = [str(Path(__file__).resolve().parents[1])]
-    if settings.autodiff_vbm:
-        additions.append(str(settings.autodiff_vbm / "src"))
     env["PYTHONPATH"] = os.pathsep.join(additions + ([env["PYTHONPATH"]] if env.get("PYTHONPATH") else []))
     return env
 

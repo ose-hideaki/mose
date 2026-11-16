@@ -33,3 +33,9 @@ Individual imported-source SHA256 values are recorded in `source-provenance.json
 Observed photometry, fit outputs, logs, compiled shared libraries, caches, virtual environments, personal configuration, unrelated GULLS/ML projects and historical server experiments are excluded. Synthetic demo photometry is included. This is not a validation of every historical research result; changed scientific conventions should be checked against saved physical curves before migrating an active analysis.
 
 The primary project has no selected redistribution license yet. Third-party MIT/GPL/LGPL notices are retained in the vendor tree. Resolve licensing of the primary code and any redistribution obligations before making a public release.
+
+## lcbinint backend migration (2026-11-16)
+
+The default analysis now imports lcbinint directly. The old autodiff-vbm facade and vendored source snapshot were removed from the working tree; the previous commits preserve them. Single-lens physics is in point_backend.py, with lcbinint supplying annual trajectories. Normal fits, NUTS, reporting and caustic geometry do not import VBM. `native-fit` is an explicitly optional legacy comparison command.
+
+Parallax outputs change to north/east piEN/piEE with a mandatory NE header. Old VBM pai1/pai2 results are not numerically interchangeable; use a fresh version and refit. Existing output files are not rewritten. Legacy worker filenames and the `.VBM` filename segment remain for command/path compatibility; engine headers identify the actual new implementation.

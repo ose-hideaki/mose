@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run profiled-flux NUTS for an optimized autodiff-vbm PSPL or FSPL model."""
+"""Run profiled-flux NUTS for an optimized JAX PSPL or FSPL model."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ import numpyro
 import numpyro.distributions as dist
 from numpyro.infer import MCMC, NUTS, init_to_value
 
-from autodiff_vbm import AutodiffVBM
+from .point_backend import PointLens
 from .jax_binary_static_fit import profile_flux, read_best, read_data
 from ..sampling import nuts_diagnostics
 
@@ -50,13 +50,9 @@ def arguments():
     return parser.parse_args()
 
 
-def read_parallax(path: Path) -> tuple[float, float]:
-    for line in path.read_text().splitlines():
-        if line.startswith("#BEST"):
-            values = [float(value) for value in line.split()[1:]]
-            if len(values) >= 10:
-                return values[8], values[9]
-    raise ValueError(f"No parallax parameters in {path}")
+def read_parallax(path):
+    from .jax_binary_parallax_fit import read_parallax as reader
+    return reader(path)
 
 
 def read_reference_time(path: Path, default: float) -> float:
@@ -74,10 +70,10 @@ def main():
     data_center = initial["t0"] if args.data_center is None else args.data_center
     datasets, times = read_data(args.list_path, data_center, args.time_window)
     times = jnp.asarray(times)
-    vbm = AutodiffVBM()
+    vbm = PointLens()
     vbm.Tol = args.tol
     vbm.RelTol = args.tol
-    vbm.espl_table_only = args.finite_source
+
     reference_time = initial["t0"]
     if args.parallax:
         from .jax_binary_parallax_fit import read_radec
@@ -90,7 +86,7 @@ def main():
         reference_time = read_reference_time(args.model, initial["t0"])
         vbm.t0_par_fixed = 1
         vbm.t0_par = reference_time
-        initial["pai1"], initial["pai2"] = read_parallax(args.model)
+        initial["piEN"], initial["piEE"] = read_parallax(args.model)
 
     center_values = [initial["u0"] if args.parallax else np.log(abs(initial["u0"])),
                      np.log(initial["tE"]), initial["t0"]]
@@ -102,9 +98,9 @@ def main():
         widths.append(np.log(20.0))
         names.append("rho")
     if args.parallax:
-        center_values.extend([initial["pai1"], initial["pai2"]])
+        center_values.extend([initial["piEN"], initial["piEE"]])
         widths.extend([0.5, 0.5])
-        names.extend(["pai1", "pai2"])
+        names.extend(["piEN", "piEE"])
     center = np.asarray(center_values)
     widths = np.asarray(widths)
 

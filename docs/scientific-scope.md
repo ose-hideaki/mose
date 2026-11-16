@@ -10,9 +10,9 @@ All models use the same valid rows and the same time cut, centered on the initia
 
 Physical parameters are t0, tE, signed u0, q, s, alpha and rho, with positive scales often optimized in logarithmic coordinates. Alpha is in **radians** in the VBMicrolensing center-of-mass convention. These are not the degree-valued alpha coordinates used by some other packages.
 
-Parallax parameters are named **pai1, pai2**, the native VBMicrolensing basis used by the vendored backend. Do not label them pi_E,N and pi_E,E or compare them to an equatorial result without an explicit convention conversion. RA/Dec, the reference epoch recorded in best-fit files and the backend convention must be retained when reproducing a curve. The pipeline does not implement a general cross-library parallax-coordinate conversion.
+Parallax parameters are **piEN, piEE**, the north/east components accepted by lcbinint. Keep sky coordinates and a fixed reference epoch. New parallax best-fit files declare `# parallax_basis= NE`. The reader rejects old unlabelled nonzero parallax inputs rather than interpreting VBM pai1/pai2 values as north/east. Start a fresh fit/version; no VBM-basis conversion is implemented.
 
-The legacy `#BEST` first seven values are t0,tE,u0,q,s,alpha,rho. Value 8 (one-based, excluding #BEST) is reserved. Values 9 and 10 are pai1,pai2. Other columns carry legacy fit metadata. Use the supplied readers and examples rather than assuming nine contiguous physical fields.
+The legacy `#BEST` first seven values are t0,tE,u0,q,s,alpha,rho. Value 8 (one-based, excluding #BEST) is reserved. Values 9 and 10 are now piEN,piEE **only when the NE header is present**. Old files in Git history used a different basis. Other columns carry legacy fit metadata.
 
 ## Optimization and sampling
 
@@ -26,4 +26,8 @@ Raw samples retain chain and draw axes. Sidecar JSON files record effective samp
 
 ## Backend
 
-The differentiable backend contains native contour calculations and finite-difference derivative machinery; automatic differentiation does not make finite-source or caustic-crossing numerical errors disappear. Validate tolerances for the event and compare selected curves with an independent physical implementation. The pinned VBMicrolensing/JAX combination has been tested on synthetic inputs, including a short annual-parallax binary sampling check. This does not validate the entire physical parameter space.
+The production binary backend is lcbinint's differentiable CPU inverse-ray implementation, pinned to a source commit in pyproject.toml. Finite-source values and derivatives depend on numerical resolution and caustic geometry. Static fits require successful warmup; dynamic annual trajectories use lcbinint's dynamic dispatch. NUTS smoothness, convergence and resolution must be checked for the event. No unconditional speed or accuracy improvement over VBM is claimed.
+
+PSPL uses the exact analytic formula. Uniform FSPL integrates analytic point-lens image contours with 2048/4096 boundary nodes and checks the difference against absolute/relative tolerance. Far from the source (rho/u < 0.001), it uses the PSPL asymptotic limit; this introduces an approximation below the configured default tolerance in the validated domain. This is not a table lookup or a lcbinint single-lens implementation. Nonconverged contour evaluations return NaN instead of silently accepting a coarse result. A node-doubling check is an estimate rather than a rigorous error bound, especially at limb crossings. Validate event-specific accuracy before production inference.
+
+The optional `native-fit` tool remains a separate VBM/emcee comparison path, with VBM pai1/pai2 conventions. Its output must not be used as an NE-labelled input without conversion.

@@ -10,3 +10,13 @@ Date: 2026-11-16. Platform: macOS, CPU; Python 3.12, NumPy 1.26.4, JAX/JAXlib 0.
 - GitHub Actions definitions cover the portable/native checks and a separately compiled JAX backend on Linux. This record describes local results; it does not claim a remote CI result before it is available.
 
 No real event analysis or convergence claim is made by this validation.
+
+## lcbinint migration validation (2026-11-16)
+
+A separate `.venv-lcbinint` uses Python 3.12, JAX/JAXlib 0.6.2, NumPyro 0.19.0 and NumPy 1.26.4. The upstream commit pinned in pyproject.toml was compiled for macOS CPU with GSL 2.8 and Boost headers. The previous environment was kept separately.
+
+All 17 unittest checks passed, including lcbinint JAX/native agreement, selected binary magnifications against the optional VBM reference, gradients against finite differences, static trajectory frame consistency, short annual binary NUTS and preserved serialization, NE basis rejection for legacy inputs, analytic PSPL, uniform FSPL central-source identity/gradients/reference values, and JIT-compiled annual single-lens trajectories. These are selected synthetic checks; caustic-wide accuracy/performance and global posterior recovery are not established.
+
+The historical validation above refers to the former autodiff-vbm implementation. It is not evidence for the new backend. The full external-grid binary workflow remains unverified end to end.
+
+The new CPU backend also completed all four point-model optimizations, 8-warmup/8-draw single-chain NUTS runs, comparison table and four physical light-curve images on the bundled synthetic data. Re-running reused all ten completed stages. Static and annual binary caustic/trajectory plots were generated with lcbinint geometry. These deliberately short chains check execution, not convergence.

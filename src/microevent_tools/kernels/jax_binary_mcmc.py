@@ -23,7 +23,7 @@ import numpyro.distributions as dist
 from numpyro.infer import MCMC, NUTS, init_to_value
 
 import os
-from . import autodiff_vbm_backend as lcbinint
+import lcbinint
 from .jax_binary_static_fit import make_objective as make_static_objective
 from .jax_binary_static_fit import pack as pack_static
 from .jax_binary_static_fit import read_best, read_data
@@ -53,13 +53,9 @@ def parse_args():
     return parser.parse_args()
 
 
-def read_parallax(path: Path) -> tuple[float, float]:
-    for line in path.read_text().splitlines():
-        if line.startswith("#BEST"):
-            values = [float(value) for value in line.split()[1:]]
-            if len(values) >= 10:
-                return values[8], values[9]
-    raise ValueError(f"No pai1/pai2 fields in {path}")
+def read_parallax(path):
+    from .jax_binary_parallax_fit import read_parallax as reader
+    return reader(path)
 
 
 def read_reference_time(path: Path, default: float) -> float:
@@ -82,7 +78,7 @@ def main() -> None:
 
         radec = args.radec or args.list_path.parent.parent / "RADec"
         ra, dec = read_radec(radec)
-        initial["pai1"], initial["pai2"] = read_parallax(args.model)
+        initial["piEN"], initial["piEE"] = read_parallax(args.model)
         initial = to_internal(initial)
         reference_time = read_reference_time(args.model, initial["t0"])
         sky = lcbinint.obs.SkyCoord(ra, dec)
@@ -90,7 +86,7 @@ def main() -> None:
         objective = make_objective(curve, times, datasets)
         center = pack(initial)
         unpack_parameters = unpack
-        parameter_names = ["t0", "tE", "u0", "q", "s", "alpha", "rho", "pai1", "pai2"]
+        parameter_names = ["t0", "tE", "u0", "q", "s", "alpha", "rho", "piEN", "piEE"]
         widths = np.asarray([0.03, 0.08, 0.01, 0.10, 0.10, 0.10, np.log(1.6), 0.25, 0.25])
     else:
         curve = lcbinint.LightCurve(options=lcbinint.Options(jax=True, coordinates="vbm_center_of_mass", tol=1e-4, reltol=1e-4, max_source_bins=400))
@@ -130,7 +126,7 @@ def main() -> None:
     )
     raw_samples = np.column_stack([np.asarray(sampler.get_samples()[f"raw_{index}"]) for index in range(dimension)])
     physical = np.asarray([[float(value) for value in unpack_parameters(jnp.asarray(row)).values()] for row in raw_samples])
-    # The autodiff-vbm facade already uses the output VBM angle convention.
+    # The lcbinint backend already uses the output VBM angle convention.
     # Applying the old lcbinint pi-alpha conversion would change the model.
     grouped_raw, diagnostics = nuts_diagnostics(sampler)
     extra = sampler.get_extra_fields()

@@ -18,7 +18,7 @@ from pathlib import Path
 
 
 RANK_PATTERN = re.compile(r"\.rank(\d+)$")
-PARAMETERS = ("t0", "tE", "u0", "q", "s", "alpha", "rho", "pai1", "pai2")
+PARAMETERS = ("t0", "tE", "u0", "q", "s", "alpha", "rho", "piEN", "piEE")
 
 
 def parse_model(path: Path, model: str, rank: int | None = None):
@@ -44,7 +44,7 @@ def parse_model(path: Path, model: str, rank: int | None = None):
     parameters = {
         "t0": padded[0], "tE": padded[1], "u0": padded[2],
         "q": padded[3], "s": padded[4], "alpha": padded[5],
-        "rho": padded[6], "pai1": padded[8], "pai2": padded[9],
+        "rho": padded[6], "piEN": padded[8], "piEE": padded[9],
     }
     return {
         "model": model, "rank": rank, "chi2": chi2, "redchi2": redchi2,

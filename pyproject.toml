@@ -12,7 +12,7 @@ dependencies = ["numpy>=1.24", "scipy>=1.10", "matplotlib>=3.7"]
 
 [project.optional-dependencies]
 native = ["VBMicrolensing>=5.5", "emcee>=3.1", "h5py>=3.9"]
-jax = ["numpy<2", "jax==0.4.35", "numpyro==0.15.3", "VBMicrolensing==5.5", "pybind11>=2.10", "cmake>=3.18"]
+jax = ["numpy<2", "jax==0.6.2", "numpyro==0.19.0", "lcbinint @ git+https://github.com/NunotaKansuke/lcbinint.git@b51c00c566667fc2ed1fe640543219f480642002"]
 test = ["pytest>=7"]
 
 [project.scripts]

@@ -9,38 +9,63 @@ import unittest
 import numpy as np
 
 
-AVAILABLE = all(importlib.util.find_spec(x) for x in ('jax','numpyro','autodiff_vbm','VBMicrolensing'))
+AVAILABLE = all(importlib.util.find_spec(x) for x in ('jax','numpyro','lcbinint'))
 
 
-@unittest.skipUnless(AVAILABLE,'install and build the jax extra and vendor backend')
+@unittest.skipUnless(AVAILABLE,'install and build the jax extra')
 class JaxBackendTests(unittest.TestCase):
     def test_caustic_trajectory_matches_backend(self):
         from microevent_tools.kernels.plot_caustic import source_trajectory
-        from autodiff_vbm import AutodiffVBM
+        import lcbinint
         p=dict(t0=8000., tE=12., u0=-.2, q=.001, s=1.2, alpha=1.1, rho=.002)
         tau=np.linspace(-1,1,9)
-        raw=[np.log(p['s']),np.log(p['q']),p['u0'],p['alpha'],np.log(p['rho']),np.log(p['tE']),p['t0']]
-        expected=AutodiffVBM().BinaryLightCurve(raw,p['t0']+tau*p['tE'])
+        curve=lcbinint.LightCurve(options=lcbinint.Options(coordinates='vbm_center_of_mass'))
+        expected=curve.source_trajectory(p['t0']+tau*p['tE'],p)
         x,y=source_trajectory(p,tau)
-        np.testing.assert_allclose(x,expected[1],atol=1e-12)
-        np.testing.assert_allclose(y,expected[2],atol=1e-12)
+        np.testing.assert_allclose(x,expected.x,atol=1e-12)
+        np.testing.assert_allclose(y,expected.y,atol=1e-12)
 
     def test_native_static_magnifications_and_gradient(self):
         import jax
         import jax.numpy as jnp
-        import VBMicrolensing
-        from autodiff_vbm import AutodiffVBM
+        import lcbinint
         jax.config.update('jax_enable_x64',True)
-        engine=AutodiffVBM();native=VBMicrolensing.VBMicrolensing()
-        # Match BOTH tolerance knobs. Different RelTol defaults otherwise
-        # select different finite-source approximations near high magnification.
-        engine.Tol=engine.RelTol=native.Tol=native.RelTol=1e-7
+        options=dict(coordinates='vbm_center_of_mass',tol=1e-4,reltol=1e-4,max_source_bins=400)
+        engine=lcbinint.LightCurve(options=lcbinint.Options(jax=True,**options))
+        native=lcbinint.LightCurve(options=lcbinint.Options(**options))
         t=np.linspace(7990,8010,11)
-        p=np.array([np.log(1.2),np.log(.001),-.2,1.,np.log(.002),np.log(12.),8000.])
-        result=np.asarray(engine.BinaryLightCurve(p,t)[0]);reference=np.asarray(native.BinaryLightCurve(p.tolist(),t.tolist())[0])
-        np.testing.assert_allclose(result,reference,rtol=1e-5,atol=1e-5)
-        gradient=np.asarray(jax.grad(lambda value:jnp.sum(engine.BinaryLightCurve(value,t)[0]))(jnp.asarray(p)))
-        self.assertTrue(np.isfinite(gradient).all())
+        p=dict(t0=8000.,tE=12.,u0=-.2,q=.001,s=1.2,alpha=1.,rho=.002)
+        result=np.asarray(engine(jnp.asarray(t),p));reference=np.asarray(native(t,p))
+        np.testing.assert_allclose(result,reference,rtol=2e-4,atol=2e-4)
+        loss=lambda u:jnp.sum(engine(jnp.asarray(t),dict(p,u0=u)))
+        if importlib.util.find_spec('VBMicrolensing'):
+            import VBMicrolensing
+            vbm=VBMicrolensing.VBMicrolensing();vbm.Tol=vbm.RelTol=1e-4
+            raw=[np.log(p['s']),np.log(p['q']),p['u0'],p['alpha'],np.log(p['rho']),np.log(p['tE']),p['t0']]
+            np.testing.assert_allclose(result,vbm.BinaryLightCurve(raw,t.tolist())[0],rtol=5e-4,atol=5e-4)
+        gradient=float(jax.grad(loss)(p['u0']))
+        h=1e-5
+        finite_difference=float((loss(p['u0']+h)-loss(p['u0']-h))/(2*h))
+        self.assertTrue(np.isfinite(gradient))
+        np.testing.assert_allclose(gradient,finite_difference,rtol=.02,atol=.02)
+
+    def test_single_lens_and_prior_basis(self):
+        import jax.numpy as jnp
+        from microevent_tools.kernels.point_backend import PointLens
+        from microevent_tools.kernels.jax_binary_parallax_fit import read_parallax
+        import jax
+        lens=PointLens()
+        p=jnp.array([np.log(.2),np.log(12.),8000.])
+        t=jnp.array([7990.,8000.,8010.])
+        u=np.sqrt(.2**2+((np.asarray(t)-8000.)/12.)**2)
+        expected=(u*u+2)/(u*np.sqrt(u*u+4))
+        np.testing.assert_allclose(lens.PSPLLightCurve(p,t)[0],expected,rtol=1e-12)
+        self.assertTrue(np.isfinite(jax.grad(lambda x:jnp.sum(lens.PSPLLightCurve(x,t)[0]))(p)).all())
+        with tempfile.TemporaryDirectory() as temp:
+            path=Path(temp)/'old'
+            path.write_text('#BEST 8000 12 .2 .001 1.2 1 .002 0 .1 .2\n')
+            with self.assertRaisesRegex(ValueError,'basis'):
+                read_parallax(path)
 
     def test_short_parallax_nuts_preserves_angle_and_columns(self):
         root=Path(__file__).resolve().parents[1]
@@ -48,9 +73,9 @@ class JaxBackendTests(unittest.TestCase):
         radec=root/'examples/demo/data/2026/DEMO/RADec'
         with tempfile.TemporaryDirectory() as temp:
             base=Path(temp);model=base/'initial'
-            # t0,tE,u0,q,s,alpha,rho,reserved,pai1,pai2
+            # t0,tE,u0,q,s,alpha,rho,reserved,piEN,piEE
             values=[8000.,12.,.2,.001,1.2,1.,.002,0.,.01,-.02]+[0.]*8
-            model.write_text('#chi2/dof= 1000 Ndata= 241 nparam= 13 redchi2= 4.38\n#BEST '+' '.join(map(str,values))+'\n# t_ref= 8000\n')
+            model.write_text('# parallax_basis= NE\n#chi2/dof= 1000 Ndata= 241 nparam= 13 redchi2= 4.38\n#BEST '+' '.join(map(str,values))+'\n# t_ref= 8000\n')
             output=base/'chain.npz';best=base/'best'
             command=[sys.executable,'-m','microevent_tools.kernels.jax_binary_mcmc',
                 '--model',str(model),'--list',str(listing),'--radec',str(radec),

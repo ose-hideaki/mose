@@ -28,7 +28,6 @@ class Settings:
     always_continue: bool = False
     post_binary: bool = True
     python: str = sys.executable
-    autodiff_vbm: Path | None = None
     slots: int = 2
     nice: int = 19
     queue: str = ""
@@ -48,7 +47,7 @@ def load(path: Path) -> Settings:
         "event": {"name", "year", "version", "model", "project_root"},
         "pipeline": {"stage", "time_window", "max_modes", "max_stages", "keep", "delta_chi2", "binary_threshold", "always_continue", "post_binary"},
         "mcmc": {"warmup", "samples", "chains", "seed"},
-        "runtime": {"python", "autodiff_vbm"},
+        "runtime": {"python"},
         "scheduler": {"slots", "nice", "queue", "parallel_environment", "qsub"},
         "grid": {"results", "parameters", "expected", "command"},
     }
@@ -81,7 +80,6 @@ def load(path: Path) -> Settings:
         event=name, year=year, version=version, model=model, **pipeline,
         **raw.get("mcmc", {}), **raw.get("scheduler", {}),
         python=str(runtime.get("python", sys.executable)),
-        autodiff_vbm=resolve(runtime["autodiff_vbm"]) if runtime.get("autodiff_vbm") else None,
         grid_results=resolve(grid["results"]) if grid.get("results") else None,
         grid_parameters=resolve(grid["parameters"]) if grid.get("parameters") else None,
         grid_expected=grid.get("expected"), grid_command=tuple(command))

@@ -47,7 +47,7 @@ def main(argv=None):
         elif args.command=='doctor':
             from .pipeline import describe
             result=describe(config)
-            result['dependencies']={name:importlib.util.find_spec(name) is not None for name in ('jax','numpyro','autodiff_vbm','VBMicrolensing')}
+            result['dependencies']={name:importlib.util.find_spec(name) is not None for name in ('jax','numpyro','lcbinint')}
             print(json.dumps(result,indent=2))
             return 0 if all(result['dependencies'].values()) else 2
         return 0

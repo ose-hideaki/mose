@@ -83,7 +83,7 @@ def main() -> None:
         "# selected_by=min_chi2",
         f"# selected_rank={selected['rank']} selected_type={selected['type']} selected_chi2={selected['chi2']:.12e}",
         f"# selected_source={selected['path']}",
-        "rank\ttype\tchi2\tdelta_from_best\tt0\ttE\tu0\tq\ts\talpha\trho\tpai1\tpai2\tpath",
+        "rank\ttype\tchi2\tdelta_from_best\tt0\ttE\tu0\tq\ts\talpha\trho\tpiEN\tpiEE\tpath",
     ]
     for item in candidates:
         values = item["values"]
