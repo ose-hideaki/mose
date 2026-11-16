@@ -1,0 +1,22 @@
+[event]
+name = "DEMO"
+year = "2026"
+version = "v1"
+project_root = "demo"
+
+[pipeline]
+stage = "point"
+time_window = 40.0
+
+[mcmc]
+warmup = 500
+samples = 1000
+chains = 2
+seed = 42
+
+[scheduler]
+slots = 2
+nice = 19
+# Set queue and parallel_environment for your Grid Engine installation.
+# queue = "your.queue"
+parallel_environment = "smp"

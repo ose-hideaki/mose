@@ -1,0 +1,34 @@
+[event]
+name = "DEMO"
+year = "2026"
+version = "v2"
+project_root = "demo"
+
+[pipeline]
+stage = "all"
+time_window = 40.0
+binary_threshold = 1.0
+always_continue = false
+post_binary = true
+max_modes = 20
+max_stages = 10
+keep = 10
+delta_chi2 = 10.0
+
+[mcmc]
+warmup = 500
+samples = 1000
+chains = 2
+seed = 42
+
+[scheduler]
+slots = 2
+nice = 19
+parallel_environment = "smp"
+
+[grid]
+# Supply your own compatible solver/maps or precomputed result_*.dat files.
+results = "demo/analysis/2026/DEMO/v2/grid/results"
+expected = 1
+# An argument array, never a shell command. Supported placeholders are documented.
+# command = ["{python}", "solver.py", "--data", "{grid_json}", "--result-dir", "{results}"]

@@ -1,0 +1,66 @@
+{
+  "autodiff_vbm_backend": {
+    "source_file": "autodiff_vbm_backend.py",
+    "source_sha256": "10b27ae52a3697cac4d439e6ed016ea4a9ce7bfe7ef37a2136f4d9a739ff318d"
+  },
+  "jax_binary_static_fit": {
+    "source_file": "jax_binary_static_fit.py",
+    "source_sha256": "d4bfe544915f556753a2045cfbeafaee61eb0ba627c14b2548725a41bd3389b8"
+  },
+  "jax_binary_parallax_fit": {
+    "source_file": "jax_binary_parallax_fit.py",
+    "source_sha256": "311074e2690cedd0fd040ce681ab72ca4c1b05db62a9c564d0badca5341ab963"
+  },
+  "jax_binary_multistart": {
+    "source_file": "jax_binary_multistart.py",
+    "source_sha256": "afdde3b8bbb7faa1a1aa4336f4d2fa31fe47e49f4fb31a8da57b41db5464018a"
+  },
+  "jax_binary_mcmc": {
+    "source_file": "jax_binary_mcmc.py",
+    "source_sha256": "6595d56cc4ea7b9842cee72c757a385c0138083e195ab51707d3b00034b2840e"
+  },
+  "jax_fspl_contour": {
+    "source_file": "jax_fspl_contour.py",
+    "source_sha256": "19541b43e6cf3e4b421ac71441bfa8b84e273b667c04ce4faee81f15516de516"
+  },
+  "vbm_point_lens_fit": {
+    "source_file": "vbm_point_lens_fit.py",
+    "source_sha256": "51903318acf4e5df341b8d984e20c2aa64683b9ee3b0cc2c399312956789f47d"
+  },
+  "vbm_point_lens_mcmc": {
+    "source_file": "vbm_point_lens_mcmc.py",
+    "source_sha256": "374bcbec56281370a46a6b55c039fb08fd19fcd80b913d50b9d0af5a5616d634"
+  },
+  "collect_autogrid_modes": {
+    "source_file": "collect_autogrid_modes.py",
+    "source_sha256": "a068b18b755b9d13d5a035998cf21bf42ca12ae7d82e96220b8076af6ebc1b5a"
+  },
+  "check_binary_improvement": {
+    "source_file": "check_binary_improvement.py",
+    "source_sha256": "251ac6629454e8f8aa340d3dd8c6d19f5cca2f754730d2c5573b315affeacf99"
+  },
+  "select_binary_solution": {
+    "source_file": "select_binary_solution.py",
+    "source_sha256": "641bdd809a48eaa2055a6253201cae3ebcddb969ef960e1db0f5d49a21b68fae"
+  },
+  "summarize_bestfits": {
+    "source_file": "summarize_bestfits.py",
+    "source_sha256": "5d06a72263fb9612c7cef9ead0dde24dacbde1e883b20d3b81898caafaaab299"
+  },
+  "plot_bestfit_lightcurves": {
+    "source_file": "plot_bestfit_lightcurves.py",
+    "source_sha256": "baac2b74f2413886e6c865bbb03d300964d8fe724d482959489df0344ac72374"
+  },
+  "plot_caustic": {
+    "source_file": "plot_caustic.py",
+    "source_sha256": "bad6efbb5bc7bf907cb27a7557dec71d63a413cb8015450dc7b49a6b97db1cdc"
+  },
+  "plot_autogrid_results": {
+    "source_file": "plot_autogrid_results.py",
+    "source_sha256": "124d31887484eefdea62093cecf9953e201dbcdd4609d4c1cb0f4737d4adcf30"
+  },
+  "native_fit": {
+    "source_file": "native_vbm_emcee/fit_model.py",
+    "source_sha256": "3aa1d47fff9db8cac197209848b8cbcf5dfdac601e12aac40b11cb509ef7d802"
+  }
+}

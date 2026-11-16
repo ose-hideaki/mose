@@ -1,0 +1,45 @@
+autodiff-vbm
+============
+
+Copyright (c) 2026 Kansuke Nunota.  The autodiff-vbm source code (everything
+under src/, native/, test/, docs/) is released under the MIT License; see
+LICENSE.
+
+
+Third-party components
+----------------------
+
+VBMicrolensing
+    Copyright (c) Valerio Bozza, Vito Saggese.
+    Licensed under the GNU Lesser General Public License, version 3.0.
+    Full text: LICENSES/LGPL-3.0.txt and LICENSES/GPL-3.0.txt.
+    Upstream: https://github.com/valboz/VBMicrolensing
+
+    autodiff-vbm does NOT bundle or modify VBMicrolensing.  The optional native
+    extension (native/vbm_ffi.cpp) is compiled, on the user's machine, against
+    the unmodified C++ sources shipped inside a separately installed
+    `VBMicrolensing==5.5` package.  The extension links those sources
+    statically.
+
+    Consequences of the LGPL-3.0 on the VBMicrolensing portion:
+
+    * If you distribute a binary that contains the compiled native extension
+      (for example a wheel with the .so already built, or a frozen
+      application), that binary is a "Combined Work" under LGPL-3.0 section 4.
+      You must then either (a) ship it so the VBMicrolensing part can be
+      relinked -- provide the VBMicrolensing source and either object files
+      for the rest or a shared-library build -- or (b) link VBMicrolensing as
+      a shared library the user can replace.  You must also carry this NOTICE
+      and the LGPL/GPL texts, and state that VBMicrolensing is used and
+      covered by the LGPL.
+    * Building the extension locally for your own use (the supported install
+      path: `pip install -e '.[vbm]'` then `autodiff-vbm-build-native`)
+      triggers none of these obligations.
+    * The pure-Python parts of autodiff-vbm (the orbital models, the API
+      surface) do not link VBMicrolensing and are MIT-only.
+
+    autodiff-vbm is an independent work that calls VBMicrolensing through its
+    public interface and its published data structures; it is not endorsed by
+    or affiliated with the VBMicrolensing authors.  Do not publish a fork or a
+    release that redistributes VBMicrolensing code without first consulting
+    Valerio Bozza.
