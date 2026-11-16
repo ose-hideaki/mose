@@ -23,6 +23,7 @@ Individual imported-source SHA256 values are recorded in `source-provenance.json
 - Renamed misleading parallax labels to native `pai1/pai2`; no unsupported equatorial conversion is claimed.
 - Preserved chain axes, raw coordinate names/prior bounds and sampler diagnostics; chains execute sequentially to respect CPU allocations.
 - Model selection reads the MCMC-best static and parallax files consistently.
+- Corrected caustic plot trajectories to use radian-valued alpha and the fit backend coordinate convention; annual-parallax diagrams now use the curved trajectory.
 - Light-curve plots use unique filenames per model; the stage tracker checks the actual generated files.
 - Standalone native photometry now uses the same explicit time convention/path resolution as the pipeline, and accepts the RADec example format.
 - Standalone native emcee initial states use an explicit random seed.

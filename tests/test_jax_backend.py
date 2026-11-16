@@ -14,6 +14,17 @@ AVAILABLE = all(importlib.util.find_spec(x) for x in ('jax','numpyro','autodiff_
 
 @unittest.skipUnless(AVAILABLE,'install and build the jax extra and vendor backend')
 class JaxBackendTests(unittest.TestCase):
+    def test_caustic_trajectory_matches_backend(self):
+        from microevent_tools.kernels.plot_caustic import source_trajectory
+        from autodiff_vbm import AutodiffVBM
+        p=dict(t0=8000., tE=12., u0=-.2, q=.001, s=1.2, alpha=1.1, rho=.002)
+        tau=np.linspace(-1,1,9)
+        raw=[np.log(p['s']),np.log(p['q']),p['u0'],p['alpha'],np.log(p['rho']),np.log(p['tE']),p['t0']]
+        expected=AutodiffVBM().BinaryLightCurve(raw,p['t0']+tau*p['tE'])
+        x,y=source_trajectory(p,tau)
+        np.testing.assert_allclose(x,expected[1],atol=1e-12)
+        np.testing.assert_allclose(y,expected[2],atol=1e-12)
+
     def test_native_static_magnifications_and_gradient(self):
         import jax
         import jax.numpy as jnp

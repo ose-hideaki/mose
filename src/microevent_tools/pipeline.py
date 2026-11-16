@@ -43,7 +43,8 @@ def plan(config):
                              ('PARALLAX', suffix(paths.binary,'.rank1.PARALLAX.VBM.MCMC.bestfit'))]:
             image = paths.output/'result'/f'{paths.model}.{label}_CAUSTIC.png'
             steps.append(Step(f'caustic_{label.lower()}', kernel(config,'plot_caustic',
-                '--model',model,'--output',image), (image,), (model,), 'binary'))
+                '--model',model,'--output',image,
+                *(('--parallax', '--radec', paths.radec) if label=='PARALLAX' else ())), (image,), (model,), 'binary'))
     else:
         steps += report.build(config, paths, center, window, point_only=True)
     return paths, datasets, steps

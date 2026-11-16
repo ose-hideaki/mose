@@ -2,7 +2,7 @@
 
 Date: 2026-11-16. Platform: macOS, CPU; Python 3.12, NumPy 1.26.4, JAX/JAXlib 0.4.35, NumPyro 0.15.3, VBMicrolensing 5.5, emcee 3.1.6.
 
-- 12 unittest checks passed: configuration and fixed data cuts, relative paths, SGE resources/script syntax, stage reuse and invalidation, gate handling, native PSPL analytic agreement and flux recovery, finite signed-u0 binary magnifications, deterministic short emcee runs, native RADec/data conventions, JAX magnification/gradient, short binary annual-parallax NUTS serialization.
+- 13 unittest checks passed: configuration and fixed data cuts, relative paths, SGE resources/script syntax, stage reuse and invalidation, gate handling, native PSPL analytic agreement and flux recovery, finite signed-u0 binary magnifications, deterministic short emcee runs, native RADec/data conventions, JAX magnification/gradient, caustic trajectory convention, short binary annual-parallax NUTS serialization.
 - Vendored native extension built successfully from source on this Mac.
 - Root package wheel built successfully without bundling the native extension.
 - Synthetic point workflow ran all four point models through optimization, short local NUTS, summary and four light-curve plots. Warmup/draws were intentionally only 8/8 and one chain; this was an execution check, not an inference-quality result. Repeating the command reused all ten completed stages. The generated light-curve image was visually checked.
