@@ -1,42 +1,76 @@
 # mose
 
-重力マイクロレンズの最適化・MCMC・結果比較を、イベント単位の設定ファイルから実行するツール集。
-個人サーバーに依存していたスクリプトを、共通のデータ読み込み・設定・実行記録を持つパッケージに整理した。
+mose is a Python toolkit for reproducible gravitational microlensing analysis. It combines model fitting, local MCMC sampling, and diagnostic plots in a configuration-driven workflow that runs locally or through Grid Engine.
 
-## 対応する処理
+Binary-lens magnifications and gradients are evaluated with the differentiable CPU backend of [lcbinint](https://github.com/NunotaKansuke/lcbinint). Single-lens models use an analytic point-source formula and uniform-source image-contour integration implemented in JAX.
 
-- PSPL / FSPL、それぞれのannual parallax付きモデルの最適化と局所NUTS
-- 外部autogridの探索結果の取り込み、binary多点初期化最適化
-- 改善度判定、static binary / annual parallax binaryの局所NUTSと候補選択
-- 必要に応じたpointモデル再フィット、比較表・ライトカーブ・caustic図
-- 同一条件の完了工程の再利用、工程別ログ、Grid Engineへの投入
-- 旧環境との比較用に独立したVBMicrolensing + emceeフィッター（任意のnative extra）
+This is an early developer release. The command-line entry point is **`microevent`**.
 
-**実行完了は、MCMCの収束や全ての縮退解を回収したことを意味しない。**
-特にNUTSは最適化解周辺の有限範囲で実行する。物理的な事前分布を設定した大域的事後分布とは区別する。
+## Features
 
-## インストール
+- Point-source point-lens (PSPL) and finite-source point-lens (FSPL) fitting
+- Static and annual-parallax models
+- Binary-lens multistart refinement from external grid-search results
+- Local posterior sampling with NumPyro NUTS
+- Model-comparison tables, light curves, residuals, and caustic diagrams
+- Versioned outputs, per-stage logs, and reuse of unchanged completed stages
+- Optional Grid Engine submission with configurable CPU resources
 
-Python 3.11以上、C++17コンパイラー、CMake、GSL、Boostの開発用ファイルが必要。
-通常の解析は **lcbinint CPU/JAX** を使用し、autodiff-vbm/VBMicrolensingへの実行時依存はない。
-単一レンズはPSPL解析式と、このパッケージのuniform-source FSPL輪郭積分を使う。
+The binary workflow is:
 
-Macでは `brew install gsl boost`、Debian/Ubuntuでは `sudo apt-get install libgsl-dev libboost-dev` で開発用ファイルを用意する。
-既存の解析環境から分けてインストールする。
+```text
+Point-lens fits → external grid search → binary refinement
+    → improvement check → local static/parallax NUTS → reports and plots
+```
+
+## Developer Install
+
+Requirements:
+
+- Python 3.11 or later and Git
+- A C++17 compiler and CMake 3.16 or later
+- GSL development headers/libraries and Boost headers
+- CPU JAX/JAXlib 0.6.2 and NumPyro 0.19.0
+
+Install the native development dependencies first:
 
 ```bash
+# macOS
+brew install gsl boost
+```
+
+```bash
+# Debian / Ubuntu
+sudo apt-get install libgsl-dev libboost-dev
+```
+
+Then install mose in a separate environment:
+
+```bash
+git clone https://github.com/ose-hideaki/mose.git
+cd mose
+
 python3.11 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip setuptools wheel
 python -m pip install 'numpy<2' 'jax==0.6.2' 'numpyro==0.19.0' scikit-build-core pybind11 cmake
-python -m pip install --no-build-isolation -e '.[jax,test]'
+CMAKE_BUILD_PARALLEL_LEVEL=2 python -m pip install --no-build-isolation -e '.[jax,test]'
 ```
 
-lcbinintはGitHubの特定commitに固定して取得する。Macでライブラリーの場所を見つけられない場合は、最後のコマンドに
-`GSL_ROOT=$(brew --prefix gsl) CMAKE_PREFIX_PATH=$(brew --prefix)` を環境変数として指定する。
-GPUは不要。JAX 64-bitを使用する。詳細は [docs/backend-lcbinint.md](docs/backend-lcbinint.md)。
+The installation builds a pinned lcbinint source revision. No GPU is required. Installing JAX before building without isolation keeps the FFI headers aligned with the runtime.
 
-## 合成データで試す
+If Homebrew libraries are not found on macOS, replace the last command with:
+
+```bash
+GSL_ROOT="$(brew --prefix gsl)" CMAKE_PREFIX_PATH="$(brew --prefix)" \
+  CMAKE_BUILD_PARALLEL_LEVEL=2 python -m pip install --no-build-isolation -e '.[jax,test]'
+```
+
+See [Backend notes](docs/backend-lcbinint.md) for the pinned revision and numerical details.
+
+## Quick Use
+
+Run the bundled synthetic example from the repository root:
 
 ```bash
 microevent plan examples/point.toml
@@ -45,71 +79,102 @@ microevent run examples/point.toml
 microevent status examples/point.toml
 ```
 
-例には実観測データを含めていない。2系列のPSPL合成データを使い、4モデルを比較する。
-`examples/demo/analysis/2026/DEMO/v1/` にログ・状態・結果を保存する。
-例のMCMCは500 warmup、1000 draws、2 chains。動作確認だけなら別設定・別versionに小さい値を指定する。
+- `plan` validates the inputs and prints the workflow without running it.
+- `doctor` also checks the main backend dependencies.
+- `run` fits and samples the four single-lens models: PSPL, FSPL, and their annual-parallax counterparts.
+- `status` displays the saved stage records.
 
-同じコマンドを再実行すると、入力・コード・出力のハッシュが一致した完了工程を再利用する。
-実行途中で停止したMCMCのチェーンを延長する機能ではなく、未完了工程を最初から実行し直す。
-条件変更時は**新しいversion**を使用する。`--force` は既存の追跡済み結果を上書きし得るため、通常は使用しない。
+The example uses two synthetic flux datasets. Its sampling settings are 500 warmup steps and 1,000 retained draws per chain, with two sequential chains. Results are written to:
 
-## 自分のイベントを用意する
+```text
+examples/demo/analysis/2026/DEMO/v1/
+├── logs/                   # One log per stage
+├── result/                 # Best fits, chains, tables, and plots
+├── pipeline-state.json     # Stage records and checksums
+└── pipeline-summary.json   # Execution summary
+```
+
+Repeating `run` reuses completed stages when their inputs, code, and outputs match. An interrupted sampling stage restarts; it does not extend a partial chain. Use a new event version when changing the data or analysis settings.
+
+## Analyze Your Own Event
+
+Create a project with this layout:
 
 ```text
 project/
-  data/2026/EVENT/RADec
-  data/2026/EVENT/v1/list
-  data/2026/EVENT/v1/EVENT-0
-  data/2026/EVENT/v1/obs/band.flux
-  analysis/                         # 自動作成
+├── event.toml
+└── data/2026/EVENT/
+    ├── RADec
+    └── v1/
+        ├── list
+        ├── EVENT-0
+        └── photometry.flux
 ```
 
-`examples/point.toml` をコピーし、`event.name/year/version/project_root` を設定する。
-`project_root` などの相対パスは、設定ファイルのある場所を基準に解決する。
-`list` は `obs/band.flux OBSERVATORY BAND` のように、1行1データセット。
-測光ファイルの先頭3列は `time flux sigma`。sigmaが正の有限行だけを使用する。
-**時間は全てJD/HJD − 2450000の日単位に揃える。自動変換しない。**
-初期値は同梱例の`#BEST`形式、RADecは同梱例の赤経・赤緯形式を使用する。
-角度・parallaxの規約は [docs/scientific-scope.md](docs/scientific-scope.md) を必ず確認する。
+A minimal `event.toml` is:
 
-## binary解析
+```toml
+[event]
+name = "EVENT"
+year = "2026"
+version = "v1"
+project_root = "."
 
-`examples/full.toml` が設定例。autogrid本体・増光マップは別途用意する。
-既存の探索結果を指定するか、`grid.command` に外部プログラムの引数配列を指定する。
-完全性を`grid.expected`または`grid.parameters`で検査し、不完全な結果を黙って解析しない。
-外部プログラムが非同期にジョブを投入する場合、その終了後にパイプラインを再実行する。
-外部コマンド側には重複投入を避ける設定を使用する。
+[pipeline]
+stage = "point"
 
-詳細は [docs/workflow.md](docs/workflow.md) を参照。
+[mcmc]
+warmup = 500
+samples = 1000
+chains = 2
+seed = 42
+```
 
-## Grid Engineで実行
+Paths are resolved relative to the configuration file. Each row of `list` specifies a photometry file, observatory, and band:
 
-設定の`[scheduler]`でqueueとparallel environmentを自分の環境に合わせる。
-既定値は2 slots、nice 19。内部数値計算のスレッド数もslotsに合わせる。
+```text
+photometry.flux OBSERVATORY I
+```
+
+Photometry files contain `time flux sigma` in their first three columns. Use days after JD/HJD 2450000 consistently; the loader does not convert time standards. `RADec` contains, for example:
+
+```text
+RA= 18:00:00 Dec= -29:00:00
+```
+
+`EVENT-0` supplies initial parameters in the legacy `#BEST` format. Copy the structure of [the synthetic initial model](examples/demo/data/2026/DEMO/v1/DEMO-0) and replace its values. Then run:
 
 ```bash
-microevent plan event.toml
-microevent submit event.toml
+microevent plan project/event.toml
+microevent run project/event.toml
 ```
 
-`submit`を実行した場合にのみqsubする。設定で使用するPython環境を指定できる。
-外部autogridが追加投入するジョブの資源は、外部コマンド側で別途制限する。
-ログはversion別の`logs/`、投入用スクリプトは`scheduler/`に保存する。
+For binary analysis, start from [examples/full.toml](examples/full.toml). Supply compatible external autogrid results or a grid command, and configure the expected result count. The grid solver and magnification maps are not bundled. See [Workflow details](docs/workflow.md).
 
-## テスト
+## Grid Engine
+
+Configure the queue and parallel environment in `[scheduler]`, then submit:
+
+```bash
+microevent submit project/event.toml
+```
+
+The defaults are two CPU slots and nice level 19; numerical threads are limited to the allocated slots. Only `submit` calls `qsub`. External grid-search jobs need their own resource settings.
+
+## Tests and Documentation
 
 ```bash
 python -m unittest discover -s tests -v
 ```
 
-設定・データ選択・再実行・資源設定、native増光・短いemcee、JAX増光と勾配・短いparallax NUTSを検査する。
-lcbinintまたは任意のnative依存がない場合は対応する試験をskipする。短いチェーンの試験は収束試験ではない。
+Optional tests are skipped when their dependencies are unavailable. The separate legacy `native-fit` comparison tool requires `pip install -e '.[native]'`; it uses VBMicrolensing and emcee, which are not required by the default pipeline.
 
-## 由来と公開範囲
+- [Scientific conventions and inference scope](docs/scientific-scope.md)
+- [Workflow, external grid integration, and recovery](docs/workflow.md)
+- [lcbinint backend](docs/backend-lcbinint.md)
+- [Validation record](docs/validation.md)
+- [Migration notes and source attribution](docs/migration.md)
 
-元スクリプトとの対応と既知の修正は [docs/migration.md](docs/migration.md)、元ファイルのハッシュは
-[docs/source-provenance.json](docs/source-provenance.json) に記録した。
-実データ・認証情報・サーバーの個人パス・結果・既存のバイナリーは配布対象に含めない。
-主プロジェクトのライセンスは未設定。外部依存のライセンスは各プロジェクトを参照する。
+Local NUTS uses bounded priors around fitted solutions and profiled source/blend fluxes. Execution completion does not establish convergence or recovery of every degenerate mode. Alpha is in radians; new annual-parallax files use north/east components and declare `# parallax_basis= NE`. Old VBM-basis files require conversion or a fresh fit.
 
-検証した環境・範囲は [docs/validation.md](docs/validation.md) に記録している。
+The primary project does not currently declare a redistribution license. External dependencies retain their respective licenses.
